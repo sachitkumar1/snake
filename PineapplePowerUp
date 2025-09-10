@@ -1,0 +1,46 @@
+package Snake;
+
+import java.awt.Graphics2D;
+
+public class PineapplePowerUp {
+    private int row, col, size;
+    private boolean active = false;
+
+    public PineapplePowerUp(int size) {
+        this.size = size;
+        this.active = false;
+    }
+
+    public void spawn(Board b, Snake s) {
+        int r = (int)(Math.random() * b.getGrid().length);
+        int c = (int)(Math.random() * b.getGrid()[0].length);
+        //reconsiders location if the snake occupies its originally proposed location
+        while (s.occupies(r, c)) {
+            r = (int)(Math.random() * b.getGrid().length);
+            c = (int)(Math.random() * b.getGrid()[0].length);
+        }
+        this.row = r;
+        this.col = c;
+        this.active = true;
+    }
+
+    public void draw(Graphics2D g) {
+        if (active) {
+            g.drawImage(Images.pineapple, col * size, row * size, size, size, null);
+        }
+    }
+
+    public boolean isActive() {
+        return active;
+    }
+
+    public void deactivate() {
+        this.active = false;
+    }
+
+    public int getRow() { 
+    	return row; 
+    	}
+    public int getCol() {
+    	return col; }
+}
