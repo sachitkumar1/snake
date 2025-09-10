@@ -1,0 +1,652 @@
+package Snake;
+
+import java.awt.Color;
+import java.awt.Font;
+import java.awt.Graphics2D;
+import java.awt.event.KeyEvent;
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+
+import javax.sound.sampled.AudioInputStream;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.Clip;
+import javax.sound.sampled.LineUnavailableException;
+import javax.sound.sampled.UnsupportedAudioFileException;
+
+import Utilities.GDV5;
+
+public class SnakeRunner extends GDV5{
+	
+	private int count = 0;
+	
+	private boolean gameOver = false;            
+	private int score = 0;                        
+	private String gameState = "splash"; 
+	private int difficulty = 10; // default to medium speed difficulty (moves every 10 frames)
+	private int blockSize = 20; // default block size
+	private int rows = 27;
+	private int cols = 36;
+	private String menuStage = "difficulty"; 
+	private Board board = new Board(rows, cols, blockSize);
+	private Snake snake = new Snake(blockSize, rows / 2, cols / 2);
+	private Food food = Food.spawn(board, snake, blockSize); // current food
+	private BackgroundMusic music = new BackgroundMusic();
+	private boolean musicPlaying = false;
+	private PineapplePowerUp pineapple = new PineapplePowerUp(blockSize);
+	private ArrayList<Food> apples = new ArrayList<>();//apples in the pineapple powerup
+	private EggplantPowerUp eggplant = new EggplantPowerUp(blockSize);
+	private HeartPowerUp heart = new HeartPowerUp(blockSize);
+	private boolean isMultiplayer = false;
+	private Snake player1;
+	private Snake player2;
+	private boolean p1Alive = true;
+	private boolean p2Alive = true;
+	private int scoreP1 = 0;
+	private int scoreP2 = 0;
+	private Food foodP1;
+	private Food foodP2;
+	boolean heartActive = false;
+	
+	public static void main(String[] args) {
+		// TODO Auto-generated method stub
+		SnakeRunner s = new SnakeRunner();
+		s.start();
+	}
+	
+	@Override
+	public void update() {
+		if (gameState.equals("rules")) {
+		    if (KeysPressed[KeyEvent.VK_H]) {
+		        playButtonSound();
+		        gameState = "splash";
+		        musicPlaying = false; 
+		    }
+		    return; 
+		}
+		if (gameState.equals("splash")) {
+		    //music will play on this screen
+			if (!musicPlaying) {
+				music.stopMusic();
+		        music.playMusic("menu_music.wav");
+		        musicPlaying = true;
+		    }
+		    if (KeysPressed[KeyEvent.VK_Z]) {
+		        isMultiplayer = false;
+		        playButtonSound();
+		        gameState = "menu";
+		        menuStage = "difficulty";
+		    } else if (KeysPressed[KeyEvent.VK_X]) {
+		        isMultiplayer = true;
+		        playButtonSound();
+		        //block size and difficulty set to a default on multiplayer mode. cannot select yourself. 
+		        blockSize = 20;
+		        difficulty = 8;
+		        startGame();
+		    }else if (KeysPressed[KeyEvent.VK_I]) {
+		        playButtonSound(); 
+		        gameState = "rules";
+		        return;
+		    }
+		    return;
+		}
+
+	    if (gameState.equals("menu")) {
+	        // First menu screen: choose difficulty
+	        if (menuStage.equals("difficulty")) {
+	        	//music will play on this screen
+	        	if (!musicPlaying) {
+	                music.playMusic("menu_music.wav");
+	                musicPlaying = true;
+	            }
+	        	if (KeysPressed[KeyEvent.VK_1]) {
+	            	playButtonSound();
+	                difficulty = 15; // Easy speed
+	                menuStage = "size"; // move to the size menu screen
+	            } else if (KeysPressed[KeyEvent.VK_2]) {
+	            	playButtonSound();
+	                difficulty = 8; // Medium speed
+	                menuStage = "size";
+	            } else if (KeysPressed[KeyEvent.VK_3]) {
+	            	playButtonSound();
+	                difficulty = 5; // Hard speed
+	                menuStage = "size";
+	            }
+	            else if (KeysPressed[KeyEvent.VK_4]) {
+	            	playButtonSound();
+	                difficulty = 3; // Insane speed 
+	                menuStage = "size";
+	            }
+	            else if (KeysPressed[KeyEvent.VK_5]) {
+	            	playButtonSound();
+	                difficulty = 2; // Expert speed
+	                menuStage = "size";
+	            }
+	        }
+
+	        // Second menu screen: choose block sizes
+	        else if (menuStage.equals("size")) {
+	            if (KeysPressed[KeyEvent.VK_Q]) {
+	            	playButtonSound();
+	            	blockSize = 20;
+	                startGame();
+	            } else if (KeysPressed[KeyEvent.VK_W]) {
+	            	playButtonSound();
+	            	blockSize = 30;               
+	                startGame();
+	            } else if (KeysPressed[KeyEvent.VK_E]) {
+	            	playButtonSound();
+	                blockSize = 36;
+	                startGame();
+	            } else if (KeysPressed[KeyEvent.VK_R]) {
+	            	playButtonSound();
+	                blockSize = 60;
+	                startGame();
+	            }
+	        }
+
+	        return;
+	    }
+	    // sends player back to splash page if H is pressed. 
+	    if (KeysPressed[KeyEvent.VK_H]) {
+	        playButtonSound();
+	        gameState = "splash";
+	        musicPlaying = false; //music restarts when returning to splash page
+	    }
+	    //count++ needed for count%difficulty. Controls rate of snake movement
+	    count++;
+	    if (isMultiplayer) {
+	        // Player 1 uses WASD
+	        Tile head1 = player1.getHead();
+	        if(GDV5.KeysPressed[KeyEvent.VK_W]&& head1.getDirection()!= 3) {
+				//makes it so that the sound is only played once.
+				if (head1.getDirection()!=1) snake.playTurnSoundUp();
+				head1.setDirection(1);
+			}
+			if(GDV5.KeysPressed[KeyEvent.VK_D]&& head1.getDirection()!= 0) {
+				if (head1.getDirection()!=2) snake.playTurnSoundRight();
+				head1.setDirection(2);
+
+			}
+			if(GDV5.KeysPressed[KeyEvent.VK_S]&& head1.getDirection()!= 1) {
+				if (head1.getDirection()!=3) snake.playTurnSoundDown();
+				head1.setDirection(3);
+			}
+			if(GDV5.KeysPressed[KeyEvent.VK_A] && head1.getDirection()!= 2) {
+				if (head1.getDirection()!=0) snake.playTurnSoundLeft();
+				head1.setDirection(0);}
+			
+
+	        // Player 2 uses Arrow Keys
+	        Tile head2 = player2.getHead();
+	        if(GDV5.KeysPressed[KeyEvent.VK_UP]&& head2.getDirection()!= 3) {
+				//makes it so that the sound is only played once.if I don't have the head.getDirection()!=1, the sound will keep repeating for as long as the key is pressed
+				if (head2.getDirection()!=1) snake.playTurnSoundUp();
+				head2.setDirection(1);
+			}
+			if(GDV5.KeysPressed[KeyEvent.VK_RIGHT]&& head2.getDirection()!= 0) {
+				if (head2.getDirection()!=2) snake.playTurnSoundRight();
+				head2.setDirection(2);
+
+			}
+			if(GDV5.KeysPressed[KeyEvent.VK_DOWN]&& head2.getDirection()!= 1) {
+				if (head2.getDirection()!=3) snake.playTurnSoundDown();
+				head2.setDirection(3);
+			}
+			if(GDV5.KeysPressed[KeyEvent.VK_LEFT] && head2.getDirection()!= 2) {
+				if (head2.getDirection()!=0) snake.playTurnSoundLeft();
+				head2.setDirection(0);
+			}
+	    }
+
+	    // Turning when in singleplayer
+	    if (!isMultiplayer && gameState.equals("game")) {
+	        snake.turn(board);
+	    }
+	    // Move snake at current difficulty speed
+	    if (count % difficulty == 0) {
+	        if (isMultiplayer) {
+	            if (p1Alive) {
+	                player1.move(board);
+	                Tile head1 = player1.getHead();
+	                int row1 = head1.getRow();
+	                int col1 = head1.getCol();
+	                if (row1 < 0 || row1 >= rows || col1 < 0 || col1 >= cols || wallCollision(player1) || player1.hitSelf()) {
+	                    playDeathSound();
+	                    p1Alive = false;
+	                } else if (head1.getRow() == foodP1.getRow() && head1.getCol() == foodP1.getCol()) {
+	                    playAppleSound();
+	                    player1.grow();
+	                    scoreP1++;
+	                    foodP1 = spawnFoodOnSide(player1, 0, cols / 2 - 1);
+	                }
+	            }
+	            if (p2Alive) {
+	                player2.move(board);
+	                Tile head2 = player2.getHead();
+	                int row2 = head2.getRow();
+	                int col2 = head2.getCol();
+	                if (row2 < 0 || row2 >= rows || col2 < 0 || col2 >= cols || wallCollision(player2) || player2.hitSelf()) {
+	                    playDeathSound();
+	                    p2Alive = false;
+	                } else if (head2.getRow() == foodP2.getRow() && head2.getCol() == foodP2.getCol()) {
+	                    playAppleSound();
+	                    player2.grow();
+	                    scoreP2++;
+	                    foodP2 = spawnFoodOnSide(player2, cols / 2, cols - 1);
+	                }
+	            }
+
+	        } else {
+	            //single player
+	            snake.move(board);
+	            Tile head = snake.getBody().get(0);
+	            int row = head.getRow();
+	            int col = head.getCol();
+	            // Wall collision
+	            if (row < 0 || row >= rows || col < 0 || col >= cols) {
+	                if (gameState != "gameover") playDeathSound();
+	                gameState = "gameover";
+	            }
+	            // Hits Itself
+	            if (snake.hitSelf()) {
+	                if (gameState != "gameover") playDeathSound();
+	                if (!snake.useShieldIfAvailable()) {
+	                    gameState = "gameover";
+	                }
+	                //deactivates heart if snake hits itself. 
+	                heartActive = false;
+	            }
+	            // Snake eating food
+	            if (row == food.getRow() && col == food.getCol()) {
+	                playAppleSound();
+	                snake.grow();
+	                score++;
+	                food = Food.spawn(board, snake, blockSize);
+	            }
+	        }
+	    }
+	    //background music playing
+	    if (gameState.equals("splash") || gameState.equals("menu")) {
+	        if (!musicPlaying) {
+	            music.playMusic("menu_music.wav");
+	            musicPlaying = true;
+	        }
+	    }
+	    //powerups available in single player modes only. 
+	    if (!isMultiplayer) {
+	    //different spawn moments in massive mode.
+		//spawns a pineapple (only if there isn't already one on the board). No powerup on insane or expert mode (difficulty <4)
+	    if (snake.getBody().size() == 10 && !pineapple.isActive() && blockSize!=60 && difficulty >4) {
+	        pineapple.spawn(board, snake);
+	    }
+	    else if (snake.getBody().size() == 7 && !pineapple.isActive() && blockSize == 60 && difficulty >4) {
+	        pineapple.spawn(board, snake);
+	    }
+	    Tile head = snake.getHead();
+	    //pineapple power up
+	    if (pineapple.isActive() && head.getRow() == pineapple.getRow() && head.getCol() == pineapple.getCol()) {
+	        //score++ and snake.grow() makes it so that pineapples can't keep coming. 
+	    	score++;
+	    	snake.grow();
+	    	playPowerUpSound();
+	    	pineapple.deactivate();
+	        // spawn 5 apples in random places
+	    	//clears apples from the array list before spawning new ones. 
+	        apples.clear();
+	        for (int i = 0; i < 5; i++) {
+	        	//adds five apples
+	            apples.add(Food.spawn(board, snake, blockSize));
+	        }
+	    }
+	    //if the snake hits any of the apples in the arraylist, the score goes up and the apple is removed and the snake grows. 
+	    for (int i = apples.size() - 1; i >= 0; i--) {
+	        Food f = apples.get(i);
+	        if (head.getRow() == f.getRow() && head.getCol() == f.getCol()) {
+	            playAppleSound();
+	        	snake.grow();
+	            score++;
+	            apples.remove(i);
+	        }
+	    }
+	 // Spawn eggplant when snake reaches length 30. Different spawn time for massive mode. no powerup on insane or expert mode
+	    if (snake.getBody().size() == 33 && !eggplant.isActive()&&blockSize!=60 && difficulty >4) {
+	        eggplant.spawn(board, snake);
+	    }
+	    else if (snake.getBody().size() == 17 && !eggplant.isActive() && blockSize == 60 && difficulty >4) {
+	        eggplant.spawn(board, snake);
+	    }
+
+	    // If snake eats eggplant, reduce its length by 1/3
+	    if (eggplant.checkCollision(snake.getHead())) {
+	        playPowerUpSound();
+	        score++;
+	    	eggplant.deactivate();
+	        int currentSize = snake.getBody().size();
+	        int reducedSize= currentSize / 3;
+	        //removes tail segments for the amount of reducedSize.
+	        for (int i = 0; i < reducedSize; i++) {
+	            snake.removeTail();
+	        }
+	    }
+	 // Spawn heart when length = 20, 35, 50, 65, and 80 and it's not active. this is when mode isn't massive. Checks to see if there already is a heart on the board (heart.isActive()) and whether the snake still has a life (heartActive). No Powerup on expert levels. 
+	    if ((snake.getBody().size() == 20 ||snake.getBody().size() == 35 || snake.getBody().size() == 50 || snake.getBody().size() == 65 || snake.getBody().size() == 80) && !heart.isActive() && heartActive == false && blockSize !=60 && difficulty >4) {
+	        heart.spawn(board, snake);
+	    }
+	    //different spawn moments in massive mode.
+	    else if ((snake.getBody().size() == 16 || snake.getBody().size() == 24 || snake.getBody().size() == 32 || snake.getBody().size() == 40 || snake.getBody().size() == 48 )&& !heart.isActive() && heartActive == false && blockSize == 60 && difficulty >4) {
+	        heart.spawn(board, snake);
+	    }
+	    // Check if heart is collected
+	    if (heart.checkCollision(snake.getHead())) {
+	    	//snake.grow and score++ make it so that the snake doens't keep growing. 
+	    	playPowerUpSound();
+	    	score++;
+	    	snake.grow();
+	        snake.activateShield();
+	        heart.deactivate();
+	        heartActive = true;
+	    }
+	    }
+	    if (isMultiplayer && gameState.equals("game")) {
+	        if (!p1Alive && !p2Alive) {
+	            gameState = "gameover";
+	        }
+	    }
+	}
+	
+	@Override
+	
+	public void draw(Graphics2D win) {
+	    win.setColor(Color.WHITE);
+	    //draw splash page
+	    if (gameState.equals("splash")) {
+	        win.setColor(Color.PINK);
+	        win.setFont(new Font("Arial", Font.BOLD, 48));
+	        win.drawString("Snake", getWidth() / 2 - 80, getHeight() / 2 - 60);
+	        win.setColor(Color.YELLOW);
+	        win.setFont(new Font("Arial", Font.PLAIN, 24));
+	        win.drawString("by Sachit Kumar", getWidth() / 2 - 80, getHeight() / 2 - 20);
+	        win.setColor(new Color(49, 103, 230));
+	        win.setFont(new Font("Arial", Font.PLAIN, 18));
+	        win.drawString("Press Z for Single Player", getWidth() / 2 - 100, getHeight() / 2 + 40);
+	        win.drawString("Press X for Two Player", getWidth() / 2 - 100, getHeight() / 2 + 60);
+	        win.setColor(new Color(1, 64, 160));
+	        win.drawString("Press 'I' for Rules", getWidth() / 2 - 80, getHeight() - 40);
+	        return;
+	    }
+	    if (gameState.equals("rules")) {
+	        win.setColor(Color.WHITE);
+	        win.setFont(new Font("Arial", Font.BOLD, 22));
+	        win.drawString("Snake Game Rules", getWidth() / 2 - 100, 60);
+
+	        win.setFont(new Font("Arial", Font.PLAIN, 18));
+	        win.drawString("Eat apples with your snake to increase your score.", getWidth() / 2 - 180, 100);
+
+	        //Single Player Rules
+	        win.setFont(new Font("Arial", Font.BOLD, 20));
+	        win.drawString("Single Player", getWidth() / 4 - 60, 140);
+
+	        win.setFont(new Font("Arial", Font.PLAIN, 16));
+	        win.drawString("↑ - Turn Up", 60, 190);
+	        win.drawString("↓ - Turn Down", 60, 210);
+	        win.drawString("← - Turn Left", 60, 230);
+	        win.drawString("→ - Turn Right", 60, 250);
+
+	        win.drawString("Collect other fruits/items for special powerups.", 60, 280);
+	        //Multiplayer rules
+	        win.setFont(new Font("Arial", Font.BOLD, 20));
+	        win.drawString("Multiplayer", getWidth() * 3 / 4 - 60, 140);
+
+	        win.setFont(new Font("Arial", Font.PLAIN, 16));
+	        win.drawString("Player 1 Controls:", getWidth() * 3 / 4 - 80, 170);
+	        win.drawString("W - Turn Up", getWidth() * 3 / 4 - 80, 190);
+	        win.drawString("A - Turn Left", getWidth() * 3 / 4 - 80, 210);
+	        win.drawString("S - Turn Down", getWidth() * 3 / 4 - 80, 230);
+	        win.drawString("D - Turn Right", getWidth() * 3 / 4 - 80, 250);
+
+	        win.drawString("Player 2 Controls:", getWidth() * 3 / 4 - 80, 280);
+	        win.drawString("Arrow Keys (↑ ↓ ← →)", getWidth() * 3 / 4 - 80, 300);
+
+	        win.setFont(new Font("Arial", Font.PLAIN, 16));
+	        win.drawString("Press H to return home", getWidth() / 2 - 80, getHeight() - 30);
+	        return;
+	    }
+
+	    if (gameState.equals("menu")) {
+	        // difficulty menu
+	        if (menuStage.equals("difficulty")) {
+	            win.drawString("SNAKE GAME", getWidth()/2 - 40, getHeight()/2 - 80);
+	            win.drawString("Select Difficulty:", getWidth()/2 - 60, getHeight()/2 - 40);
+	            win.setColor(new Color (115, 241, 71));
+	            win.drawString("1 - Easy", getWidth()/2 - 20, getHeight()/2 - 20);
+	            win.setColor(Color.BLUE);
+	            win.drawString("2 - Medium", getWidth()/2 - 20, getHeight()/2);
+	            win.setColor(Color.YELLOW);
+	            win.drawString("3 - Hard", getWidth()/2 - 20, getHeight()/2 + 20);
+	            win.setColor(Color.RED);
+	            win.drawString("4 - Insane (No Powerups)", getWidth()/2 - 20, getHeight()/2 + 55);
+	            win.setColor(Color.RED);
+	            win.drawString("5 - Expert (No Powerups)", getWidth()/2 - 20, getHeight()/2 + 75);
+
+	        }
+	        // size menu
+	        else if (menuStage.equals("size")) {
+	        	win.setColor(Color.PINK);
+	            win.drawString("Choose Size:", getWidth()/2 - 40, getHeight()/2 - 40);
+	            win.drawString("Q - Small", getWidth()/2 - 20, getHeight()/2 - 10);
+	            win.drawString("W - Big", getWidth()/2 - 20, getHeight()/2 + 10);
+	            win.drawString("E - Bigger", getWidth()/2 - 20, getHeight()/2 + 30);
+	            win.drawString("R - Massive", getWidth()/2 - 20, getHeight()/2 + 50);
+	        }
+	        return;
+	    }
+	    //draw gameover screen
+	    if (gameState.equals("gameover")) {
+	        win.setFont(new Font("Arial", Font.BOLD, 24));
+	        win.setColor(Color.WHITE);
+	        //different gameover screens for single player and multiplayer
+	        if (isMultiplayer) {
+	            win.drawString("Player 1 Score: " + scoreP1, getWidth() / 2 - 70, getHeight() / 2 - 20);
+	            win.drawString("Player 2 Score: " + scoreP2, getWidth() / 2 - 70, getHeight() / 2 + 10);
+	            
+	            win.setColor(Color.GREEN);
+	            if (scoreP1 > scoreP2) {
+	                win.drawString("Player 1 Wins!", getWidth() / 2 - 70, getHeight() / 2 + 60);
+	            } else if (scoreP2 > scoreP1) {
+	                win.drawString("Player 2 Wins!", getWidth() / 2 - 70, getHeight() / 2 + 60);
+	            } else {
+	                win.drawString("It's a Tie!", getWidth() / 2 - 50, getHeight() / 2 + 60);
+	            }
+	        } else {
+	        	win.setColor(Color.RED);
+	            win.drawString("Game Over", getWidth() / 2 - 60, getHeight() / 2 - 20);
+	            win.setColor(Color.PINK);
+	            win.drawString("Your Score: " + score, getWidth() / 2 - 60, getHeight() / 2 + 10);
+	        }
+	        win.setFont(new Font("Arial", Font.PLAIN, 18));
+	        win.setColor(Color.WHITE);
+	        win.drawString("Press H to return home", getWidth() / 2 - 90, getHeight() - 30);
+
+	        return;
+	    }
+	    //draw game
+	    board.draw(win);
+	    if (isMultiplayer) {
+	        player1.draw(win);
+	        player2.draw(win);
+	        //draw food on both sides
+	        foodP1.draw(win);
+	        foodP2.draw(win);
+	        // Draw divider
+	        win.setColor(Color.GRAY);
+	        win.fillRect((cols / 2) * blockSize - 1, 0, 2, getHeight());
+	        // Show scores
+	        win.setColor(Color.WHITE);
+	        win.setFont(new Font("Arial", Font.BOLD, 18));
+	        win.drawString("P1: " + scoreP1, 10, 25);
+	        win.drawString("P2: " + scoreP2, getWidth() - 70, 25);
+	        return;
+	    }
+	    snake.draw(win);
+	    food.draw(win);
+	    pineapple.draw(win);
+	    eggplant.draw(win);
+	    heart.draw(win);
+	    for (Food f : apples) {
+	        f.draw(win);
+	    }
+	    // Show score (with apple icon)
+	        win.drawImage(Images.apple, 10, 10, 24, 24, null);
+	        //score next to the apple
+	        win.setColor(Color.WHITE);
+	        win.setFont(new Font("Arial", Font.BOLD, 18));
+	        win.drawString("" + score, 40, 28); // slightly right of the apple
+	    }
+	
+	public void startGame() {
+	    music.stopMusic();
+	    musicPlaying = false;
+
+	    cols = getWidth() / blockSize;
+	    rows = getHeight() / blockSize;
+	    board = new Board(rows, cols, blockSize);
+
+	    if (isMultiplayer) {
+	        player1 = new Snake(blockSize, rows / 2, cols / 4);
+	        player2 = new Snake(blockSize, rows / 2, 3 * cols / 4);
+	        p1Alive = true;
+	        p2Alive = true;
+	        scoreP1 = 0;
+	        scoreP2 = 0;
+	    } else {
+	        snake = new Snake(blockSize, rows / 2, cols / 2);
+	        score = 0;
+	    }
+
+	    if (isMultiplayer) {
+	        foodP1 = spawnFoodOnSide(player1, 0, cols / 2 - 1);     // Left half of board
+	        foodP2 = spawnFoodOnSide(player2, cols / 2, cols - 1);  // Right half of board
+	    } else {
+	        food = Food.spawn(board, snake, blockSize);
+	    }	   
+	    gameState = "game";
+	    menuStage = "difficulty";
+	    count = 0;
+
+	    //powerups created only in single player modes. 
+	    if (!isMultiplayer) {
+	        pineapple = new PineapplePowerUp(blockSize);
+	        heart = new HeartPowerUp(blockSize);
+	        eggplant = new EggplantPowerUp(blockSize);
+	        apples.clear();
+	    }
+	}
+	public boolean wallCollision(Snake s) {
+	    Tile h = s.getHead();
+	    int dividerCol = cols / 2;
+
+	    if (h.getRow() < 0 || h.getCol() < 0 || h.getRow() >= rows || h.getCol() >= cols) return true;
+	    //snake dies if it hits the center barrier
+	    if (isMultiplayer) {
+	        if (s == player1 && h.getCol() >= dividerCol) return true;
+	        if (s == player2 && h.getCol() < dividerCol) return true;
+	    }
+	    return false;
+	}
+	//food spawn logic for double player
+	private Food spawnFoodOnSide(Snake s, int colMin, int colMax) {
+	    int r = (int)(Math.random() * rows);
+	    int c = (int)(Math.random() * (colMax - colMin + 1)) + colMin;
+	    //makes sure food doesn't spawn on top of snake or barrier. 
+	    while (s.occupies(r, c) || c == cols / 2) {
+	        r = (int)(Math.random()*rows);
+	        c = (int)(Math.random()*(colMax- colMin+ 1)) + colMin;
+	    }
+
+	    return new Food(r, c, blockSize);
+	}
+	public int getBlockSize() {
+		return blockSize;
+	}
+	public void appleSound() throws UnsupportedAudioFileException, IOException, LineUnavailableException {
+		File appleSound = new File("AppleSound.wav");
+		AudioInputStream audioStream = AudioSystem.getAudioInputStream(appleSound);
+		Clip clip = AudioSystem.getClip();
+		clip.open(audioStream);	
+		clip.start();}
+	public void playAppleSound() {
+		try {
+			appleSound();
+		} catch (UnsupportedAudioFileException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (LineUnavailableException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	public void deathSound() throws UnsupportedAudioFileException, IOException, LineUnavailableException {
+		File turnSound = new File("DeathSound.wav");
+		AudioInputStream audioStream = AudioSystem.getAudioInputStream(turnSound);
+		Clip clip = AudioSystem.getClip();
+		clip.open(audioStream);	
+		clip.start();}
+	public void playDeathSound() {
+		try {
+			deathSound();
+		} catch (UnsupportedAudioFileException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (LineUnavailableException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	public void buttonSound() throws UnsupportedAudioFileException, IOException, LineUnavailableException {
+		File turnSound = new File("Button.wav");
+		AudioInputStream audioStream = AudioSystem.getAudioInputStream(turnSound);
+		Clip clip = AudioSystem.getClip();
+		clip.open(audioStream);	
+		clip.start();}
+	public void playButtonSound() {
+		try {
+			buttonSound();
+		} catch (UnsupportedAudioFileException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (LineUnavailableException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	public void powerUpSound() throws UnsupportedAudioFileException, IOException, LineUnavailableException {
+		File turnSound = new File("powerup.wav");
+		AudioInputStream audioStream = AudioSystem.getAudioInputStream(turnSound);
+		Clip clip = AudioSystem.getClip();
+		clip.open(audioStream);	
+		clip.start();}
+	public void playPowerUpSound() {
+		try {
+			powerUpSound();
+		} catch (UnsupportedAudioFileException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (LineUnavailableException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+}
