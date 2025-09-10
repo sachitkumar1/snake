@@ -1,0 +1,41 @@
+package Snake;
+
+import java.awt.Graphics2D;
+
+public class EggplantPowerUp {
+    private int row, col, size;
+    private boolean active = false;
+
+    public EggplantPowerUp(int size) {
+        this.size = size;
+    }
+
+    public void spawn(Board b, Snake s) {
+            int r = (int)(Math.random() * b.getGrid().length);
+            int c = (int)(Math.random() * b.getGrid()[0].length);
+            //doesn't spawn where the snake already occupies a square
+            if (!s.occupies(r, c)) {
+                this.row = r;
+                this.col = c;
+                this.active = true;
+            }
+    }
+
+    public void draw(Graphics2D g) {
+        if (active) {
+            g.drawImage(Images.eggplant, col * size, row * size, size, size, null);
+        }
+    }
+
+    public boolean isActive() {
+        return active;
+    }
+
+    public void deactivate() {
+        active = false;
+    }
+
+    public boolean checkCollision(Tile head) {
+        return active && head.getRow() == row && head.getCol() == col;
+    }
+}
