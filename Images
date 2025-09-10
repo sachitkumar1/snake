@@ -1,0 +1,48 @@
+package Snake;
+
+import java.awt.image.BufferedImage;
+import java.io.IOException;
+import javax.imageio.ImageIO;
+
+public class Images {
+
+    public static BufferedImage apple;
+
+    static {
+        try {
+            apple = ImageIO.read(Images.class.getResourceAsStream("AppleSpriteSnake.png"));
+        } catch (IOException e) {
+            System.err.println("");
+            e.printStackTrace();
+        } catch (NullPointerException npe) {
+            System.err.println("");
+        }
+    }
+    public static BufferedImage pineapple;
+
+    static {
+        try {
+            pineapple = ImageIO.read(Images.class.getResourceAsStream("PineappleSprite.png"));
+        } catch (IOException e) {
+            System.err.println("Could not load pineapple image.");
+        }
+    }
+    public static BufferedImage eggplant;
+
+    static {
+        try {
+            eggplant = ImageIO.read(Images.class.getResourceAsStream("EggplantSprite.png"));
+        } catch (IOException e) {
+            System.err.println("Could not load eggplant image.");
+        }
+    }
+    public static BufferedImage heart;
+
+    static {
+        try {
+            heart = ImageIO.read(Images.class.getResourceAsStream("HeartSprite.png"));
+        } catch (IOException e) {
+            System.err.println("Could not load heart image.");
+        }
+    }
+}
