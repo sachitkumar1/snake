@@ -1,0 +1,46 @@
+
+package Snake;
+import java.awt.Color;
+import java.awt.Graphics2D;
+import java.util.Random;
+
+public class Food {
+    
+    private int row;
+    private int col;
+    private int size;
+    private Color color;
+
+    public Food(int row, int col, int size) {
+        this.row = row;
+        this.col = col;
+        this.size = size;
+    }
+    // Draws the apple image on the screen
+    public void draw(Graphics2D g) {
+        g.drawImage(Images.apple, col * size, row * size, size, size, null);
+    }
+    // Spawns a new food item in a random tile not occupied by the snake
+    public static Food spawn(Board b, Snake s, int size) {
+        int rows = b.getGrid().length;
+        int cols = b.getGrid()[0].length;
+
+        int r = (int)(Math.random() * rows);
+        int c = (int)(Math.random() * cols);
+
+        // Avoid spawning snake and center barrier column
+        while (s.occupies(r, c) || c == cols / 2) {
+            r = (int)(Math.random() * rows);
+            c = (int)(Math.random() * cols);
+        }
+
+        return new Food(r, c, size);
+    }
+    public int getRow() {
+        return row;
+    }
+
+    public int getCol() {
+        return col;
+    }
+}
