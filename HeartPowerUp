@@ -1,0 +1,47 @@
+package Snake;
+
+import java.awt.Graphics2D;
+
+//heart powerup gives snake another life if it hits itself. 
+public class HeartPowerUp {
+    private int row, col, size;
+    private boolean active = false;
+
+    public HeartPowerUp(int size) {
+        this.size = size;
+    }
+
+    public void spawn(Board b, Snake s) {
+            int r = (int)(Math.random() * b.getGrid().length);
+            int c = (int)(Math.random() * b.getGrid()[0].length);
+            //checks to make sure the heart doesn't spawn on a spot the snake is occupying.
+            if (!s.occupies(r, c)) {
+                row = r;
+                col = c;
+                active = true;
+        }
+    }
+
+    public void draw(Graphics2D g) {
+        if (active) {
+            g.drawImage(Images.heart, col * size, row * size, size, size, null);
+        }
+    }
+
+    public boolean isActive() {
+        return active;
+    }
+
+    public void deactivate() {
+        active = false;
+    }
+
+    public boolean checkCollision(Tile head) {
+        if(active && head.getRow() == row && head.getCol() == col) {
+        	return true;
+        }
+        else {
+        	return false;
+        }
+    }
+}
