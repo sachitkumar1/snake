@@ -1,0 +1,43 @@
+package Snake;
+
+import java.awt.Color;
+import java.awt.Graphics2D;
+
+public class Board {
+
+	private Tile[][] grid;
+
+	public Board(int rows, int cols, int size) {
+	    grid = new Tile[rows][cols];
+	    int x = 0, y = 0;
+
+	    for (int row = 0; row < rows; row++) {
+	        for (int col = 0; col < cols; col++) {
+	            grid[row][col] = new Tile(x, y, size, size, Color.white, row, col);
+	            x += size;
+	        }
+	        x = 0;
+	        y += size;
+	    }
+	}
+
+	public Tile[][] getGrid() {
+		return grid;
+	}
+	public void draw(Graphics2D pb) {
+	    for (int row = 0; row < grid.length; row++) {
+	        for (int col = 0; col < grid[0].length; col++) {
+	            Tile t = grid[row][col];
+	            
+	            // Checkerboard colors
+	            if ((row + col) % 2 == 0) {
+	                t.setColor(new Color(165, 210, 77));  // Light green (exact color in google snake)
+	            } else {
+	                t.setColor(new Color(156, 203, 70));  // Slightly darker green (exact color of google snake)
+	            }
+	            t.fill(pb); //fills in squares on the board
+	        }
+	    }
+	}
+	
+}
